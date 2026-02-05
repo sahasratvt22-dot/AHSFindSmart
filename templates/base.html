@@ -26,8 +26,8 @@
     </div>
 
     <nav class="nav" aria-label="Primary navigation">
-      <a class="nav-link" href="{{ url_for('home') }}">Home</a>
-      <a class="nav-link" href="{{ url_for('browse') }}">Browse</a>
+      <a class="nav-link nav-primary" href="{{ url_for('home') }}">Home</a>
+      <a class="nav-link nav-primary" href="{{ url_for('browse') }}">Browse</a>
 
       <div class="nav-dropdown">
         <button class="nav-link nav-dropbtn" aria-haspopup="true" aria-expanded="false">
@@ -54,6 +54,22 @@
         {% endif %}
         <a class="nav-link logout" href="{{ url_for('logout') }}">Logout</a>
       </div>
+
+      <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="mobileMenu" aria-label="Open menu">
+        <span class="nav-toggle-bar"></span>
+        <span class="nav-toggle-bar"></span>
+        <span class="nav-toggle-bar"></span>
+      </button>
+
+      <div id="mobileMenu" class="nav-mobile" aria-label="Mobile navigation">
+        <a class="nav-mobile-link" href="{{ url_for('report_found') }}">Report Found</a>
+        <a class="nav-mobile-link" href="{{ url_for('browse') }}">Claim Lost</a>
+        <a class="nav-mobile-link" href="{{ url_for('map_page') }}">Map</a>
+        <a class="nav-mobile-link" href="{{ url_for('feedback') }}">Feedback</a>
+        <a class="nav-mobile-link" href="{{ url_for('faq') }}">FAQ</a>
+        <a class="nav-mobile-link" href="{{ url_for('admin_panel') }}">Admin</a>
+        <a class="nav-mobile-link" href="{{ url_for('logout') }}">Logout</a>
+      </div>
     </nav>
   </header>
 
@@ -74,9 +90,6 @@
   <footer class="footer">
     <div class="footer-inner">
       <p><strong>School Lost &amp; Found</strong> — Built from scratch for the community.</p>
-      <p class="tiny">
-        Note: If you use any copyrighted images/logos, document your sources.
-      </p>
     </div>
   </footer>
 </body>

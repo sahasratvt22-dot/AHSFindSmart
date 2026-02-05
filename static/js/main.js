@@ -55,6 +55,27 @@
   });
 })();
 
+// Mobile menu toggle
+(function () {
+  const toggle = document.querySelector(".nav-toggle");
+  const menu = document.querySelector(".nav-mobile");
+  if (!toggle || !menu) return;
+
+  function closeMenu() {
+    menu.classList.remove("open");
+    toggle.setAttribute("aria-expanded", "false");
+  }
+
+  toggle.addEventListener("click", () => {
+    const open = menu.classList.toggle("open");
+    toggle.setAttribute("aria-expanded", open ? "true" : "false");
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!menu.contains(e.target) && !toggle.contains(e.target)) closeMenu();
+  });
+})();
+
 // Donut chart on home page
 (function () {
   const canvas = document.getElementById("donutChart");
