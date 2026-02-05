@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block content %}
+
+<section class="feedback-hero">
+  <div class="container">
+    <h1 class="feedback-title">Feedback Wall</h1>
+    <p class="feedback-sub">Anonymous reviews to help improve the Lost & Found experience.</p>
+  </div>
+</section>
+
+<section class="container feedback-wall">
+  <div class="feedback-layout">
+    <div class="feedback-stream">
+      <div class="feedback-stream-head">
+        <h2>What people are saying</h2>
+        <p class="muted">Anonymous reviews from students and staff.</p>
+      </div>
+      {% if reviews and reviews|length > 0 %}
+        <div class="review-grid">
+          {% for r in reviews %}
+            <div class="review-card tone-{{ loop.index0 % 4 }}">
+              <div class="review-top">
+                <div class="stars" aria-label="Rating {{ r.rating }} out of 5">
+                  {% for i in range(1,6) %}
+                    <span class="star {% if i <= r.rating %}filled{% endif %}">★</span>
+                  {% endfor %}
+                </div>
+
+                {% if is_admin %}
+                  <form method="POST" action="{{ url_for('admin_delete_review', review_id=r.id) }}"
+                        onsubmit="return confirm('Delete this review?');">
+                    <button class="btn btn-small btn-outline" type="submit">Delete</button>
+                  </form>
+                {% endif %}
+              </div>
+
+              <p class="review-text">“{{ r.message }}”</p>
+              <p class="review-meta">{{ r.created_at }}</p>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="empty-state">
+          <h2>No reviews yet</h2>
+          <p class="muted">Be the first to leave anonymous feedback.</p>
+        </div>
+      {% endif %}
+    </div>
+
+    <aside class="feedback-submit" id="feedbackForm">
+      <div class="feedback-box">
+        <h2 class="section-title" style="margin:0 0 10px;">Leave an anonymous review</h2>
+
+        <form method="POST" action="{{ url_for('feedback') }}">
+          <div class="two-col">
+            <div class="field">
+              <label>Rating</label>
+              <div class="star-input" role="radiogroup" aria-label="Choose rating">
+                {% for i in range(5,0,-1) %}
+                  <input type="radio" id="rate{{ i }}" name="rating" value="{{ i }}" {% if i == 5 %}checked{% endif %} required>
+                  <label for="rate{{ i }}" title="{{ i }} stars">★</label>
+                {% endfor %}
+              </div>
+            </div>
+
+            <div class="field">
+              <label class="muted" style="display:block;">Character limit</label>
+              <div class="tiny muted"><span id="charCount">0</span> / {{ max_len }}</div>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="message">Your feedback</label>
+            <textarea
+              id="message"
+              name="message"
+              rows="4"
+              required
+              maxlength="{{ max_len }}"
+              placeholder="Share what you liked, what was confusing, or what you'd improve..."
+            ></textarea>
+          </div>
+
+          <div class="feedback-actions">
+            <button class="btn" type="submit">Post Review</button>
+            <p class="muted tiny" style="margin:0;">No name collected. Keep it respectful.</p>
+          </div>
+        </form>
+      </div>
+    </aside>
+  </div>
+</section>
+
+<script>
+  (function(){
+    const ta = document.getElementById("message");
+    const cc = document.getElementById("charCount");
+    if(!ta || !cc) return;
+    function update(){ cc.textContent = String(ta.value.length); }
+    ta.addEventListener("input", update);
+    update();
+  })();
+</script>
+
+{% endblock %}

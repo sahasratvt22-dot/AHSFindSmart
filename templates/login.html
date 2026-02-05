@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block content %}
+
+<section class="page-head">
+  <div class="container">
+    <h1>Admin Login</h1>
+    <p class="muted">Only admins can review, approve, and manage postings.</p>
+  </div>
+</section>
+
+<section class="container">
+  <form class="form-card admin-login-card" method="POST" aria-label="Admin login form">
+    <div class="field">
+      <label for="username">Username</label>
+      <input id="username" name="username" required />
+    </div>
+    <div class="field">
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" required />
+    </div>
+
+    <div class="field actions">
+      <button class="btn" type="submit">Login</button>
+      <a class="btn btn-outline" href="{{ url_for('home') }}">Cancel</a>
+    </div>
+
+    <p class="tiny muted">
+      Tip: Set credentials in your <code>.env</code> file.
+    </p>
+  </form>
+</section>
+
+{% endblock %}

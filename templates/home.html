@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% set body_class = "home" %}
+{% block content %}
+
+<section class="hero">
+  <div class="hero-slab" aria-label="Hero text">
+    <h1>Lost it? Someone might've found it.</h1>
+    <p class="hero-sub">FindSmart: Track. Report. Recover.</p>
+
+    <div class="hero-cta">
+      <a class="btn btn-hero btn-hero-primary" href="{{ url_for('browse') }}">I Lost Something</a>
+      <a class="btn btn-hero btn-hero-secondary" href="{{ url_for('report_found') }}">I Found Something</a>
+    </div>
+  </div>
+</section>
+
+
+<section class="below-hero">
+  <div class="dashboard-frame">
+    <div class="container dashboard">
+      <div class="chart-card" aria-label="Lost vs Found donut chart">
+        <h2 class="section-title">Community Snapshot</h2>
+        <p class="muted">This chart updates automatically based on site activity.</p>
+        <div class="chart-wrap">
+      <canvas id="donutChart" aria-label="Donut chart" role="img"></canvas>
+    </div>
+    <p class="tiny muted">
+      “Lost” is estimated using claim requests; “Found” uses posted items.
+    </p>
+  </div>
+
+  <!-- RIGHT: quick stats (unchanged) -->
+  <div class="quickstats" aria-label="Quick stats">
+    <h2 class="section-title">Quick Stats</h2>
+    <div class="qs-list">
+      <div class="qs-row">
+        <div class="qs-num">{{ stats.total_found }}</div>
+        <div class="qs-label">Total items posted</div>
+      </div>
+      <div class="qs-row">
+        <div class="qs-num">{{ stats.approved_found }}</div>
+        <div class="qs-label">Approved items</div>
+      </div>
+      <div class="qs-row">
+        <div class="qs-num">{{ stats.pending }}</div>
+        <div class="qs-label">Pending review</div>
+      </div>
+      <div class="qs-row">
+        <div class="qs-num">{{ stats.claimed }}</div>
+        <div class="qs-label">Marked claimed</div>
+      </div>
+      <div class="qs-row">
+        <div class="qs-num">{{ stats.total_claims }}</div>
+        <div class="qs-label">Claim requests</div>
+      </div>
+    </div>
+
+    <div class="qs-actions">
+      <a class="btn btn-light" href="{{ url_for('report_found') }}">Report Found</a>
+      <a class="btn btn-outline" href="{{ url_for('browse') }}">Browse Items</a>
+    </div>
+  </div>
+
+</div>
+
+
+    
+
+     </div> <!-- /stats-grid -->
+  </div>   <!-- /dashboard-frame -->
+</section>
+
+
+<!-- HOW IT WORKS SECTION -->
+<section class="howto-wrap">
+  <div class="container">
+    <div class="howto-head">
+      <h2>How It Works</h2>
+      <p class="muted">Our simple process helps reunite lost items with their owners quickly and efficiently.</p>
+    </div>
+
+    <div class="howto-grid">
+      <div class="howto-card">
+        <div class="howto-num">1</div>
+        <h3>Report a Found Item</h3>
+        <p>Found something? Fill out our simple form with details and a photo to help identify the owner.</p>
+      </div>
+      <div class="howto-card">
+        <div class="howto-num">2</div>
+        <h3>Search &amp; Claim</h3>
+        <p>Lost something? Browse listings or search by description. Submit a claim when you find it.</p>
+      </div>
+      <div class="howto-card">
+        <div class="howto-num">3</div>
+        <h3>Admin Review</h3>
+        <p>Our team reviews posts and claims to keep listings accurate and safe.</p>
+      </div>
+      <div class="howto-card">
+        <div class="howto-num">4</div>
+        <h3>Verify Ownership</h3>
+        <p>Provide details that prove it’s yours (color, markings, contents, etc.).</p>
+      </div>
+      <div class="howto-card">
+        <div class="howto-num">5</div>
+        <h3>Get Reunited</h3>
+        <p>Once verified, pick up your item from the designated location.</p>
+      </div>
+      <div class="howto-card">
+        <div class="howto-num">6</div>
+        <h3>Close the Loop</h3>
+        <p>Items are marked claimed and removed from Browse.</p>
+      </div>
+    </div>
+  </div>
+</section>
+<script>
+  window.__DONUT_DATA__ = {{ {"found": stats.total_found, "lost": stats.total_claims} | tojson }};
+</script>
+
+
+{% endblock %}

@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% set body_class = "report-found" %}
+{% block content %}
+
+<section class="page-head report-head">
+  <div class="container">
+    <h1>Report a Found Item</h1>
+    <p class="muted">Submit details and upload a photo. Admin approval is required before it appears in Browse.</p>
+  </div>
+</section>
+
+<section class="container report-section">
+  <form class="form-card report-form" method="POST" enctype="multipart/form-data" aria-label="Report found item form">
+    <div class="two-col">
+      <div class="field">
+        <label for="title">Item name <span class="req">*</span></label>
+        <input id="title" name="title" required placeholder="e.g., AirPods case, Water bottle, Jacket" />
+      </div>
+
+      <div class="field">
+        <label for="category">Category <span class="req">*</span></label>
+        <input id="category" name="category" required placeholder="e.g., Electronics, Clothing, ID, Other" />
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="location_id">Location found <span class="req">*</span></label>
+      <select id="location_id" name="location_id" required>
+        <option value="" disabled selected>Select a location</option>
+        {% for loc in campus_locations %}
+          <option value="{{ loc.id }}">{{ loc.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="date_found">Date found <span class="req">*</span></label>
+      <input id="date_found" name="date_found" required type="date" />
+    </div>
+
+    <div class="field">
+      <label for="description">Description <span class="req">*</span></label>
+      <textarea id="description" name="description" required rows="5"
+        placeholder="Color, brand, identifying marks, where it was left..."></textarea>
+    </div>
+
+    <div class="field">
+      <label for="photo">Item photo (optional)</label>
+      <label class="upload-drop" for="photo">
+        <span class="upload-title">Click to upload a photo</span>
+        <span class="upload-sub">PNG, JPG, JPEG, WEBP</span>
+        <span class="upload-filename" id="uploadFilename">No file selected</span>
+      </label>
+      <input id="photo" name="photo" class="upload-input" type="file" accept=".png,.jpg,.jpeg,.webp" />
+    </div>
+
+    <div class="field actions">
+      <button class="btn" type="submit">Submit</button>
+      <a class="btn btn-outline" href="{{ url_for('browse') }}">Cancel</a>
+    </div>
+  </form>
+</section>
+
+{% endblock %}

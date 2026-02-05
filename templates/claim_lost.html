@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block content %}
+
+<section class="page-head friendly-head">
+  <div class="container">
+    <h1>Claim / Inquiry</h1>
+    <p class="muted">Request information or claim this item. An admin will contact you.</p>
+  </div>
+</section>
+
+<section class="container">
+  <div class="split">
+    <div class="card">
+      <h2 class="card-title">{{ item.title }}</h2>
+      <p class="muted">
+        <strong>Category:</strong> {{ item.category }}<br/>
+        <strong>Found at:</strong> {{ item.location_found }}<br/>
+        <strong>Date:</strong> {{ item.date_found }}
+      </p>
+      <p>{{ item.description }}</p>
+
+      {% if item.photo_filename %}
+        <img class="detail-img" src="{{ url_for('uploaded_file', filename=item.photo_filename) }}"
+             alt="Photo of {{ item.title }}">
+      {% endif %}
+    </div>
+
+    <form class="form-card" method="POST" aria-label="Claim form">
+      <div class="field">
+        <label for="student_name">Your name <span class="req">*</span></label>
+        <input id="student_name" name="student_name" required placeholder="First and last name" />
+      </div>
+
+      <div class="field">
+        <label for="email">Email <span class="req">*</span></label>
+        <input id="email" name="email" type="email" required placeholder="you@school.edu" />
+      </div>
+
+      <div class="field">
+        <label for="message">Message <span class="req">*</span></label>
+        <textarea id="message" name="message" required rows="6"
+          placeholder="Describe what proves it’s yours (case color, sticker, serial, what was inside, etc.)"></textarea>
+      </div>
+
+      <div class="field actions">
+        <button class="btn" type="submit">Send Request</button>
+        <a class="btn btn-outline" href="{{ url_for('browse') }}">Back</a>
+      </div>
+    </form>
+  </div>
+</section>
+
+{% endblock %}

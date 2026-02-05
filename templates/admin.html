@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block content %}
+
+<section class="page-head">
+  <div class="container">
+    <h1>Admin Panel</h1>
+    <a class="btn btn-outline" href="{{ url_for('admin_change_password') }}">Change Password</a>
+    <p class="muted">Review submissions, approve items, mark claimed, or delete posts.</p>
+  </div>
+</section>
+
+<section class="container">
+  <h2 class="section-title">All Items</h2>
+
+  <div class="table-wrap" role="region" aria-label="Admin items table">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Title</th>
+          <th>Status</th>
+          <th>Found Location</th>
+          <th>Date Found</th>
+          <th>Photo</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in items %}
+          <tr>
+            <td>{{ item.id }}</td>
+            <td>{{ item.title }}</td>
+            <td><span class="badge badge-{{ item.status }}">{{ item.status }}</span></td>
+            <td>{{ item.location_found }}</td>
+            <td>{{ item.date_found }}</td>
+            <td>
+              {% if item.photo_filename %}
+                <a class="link" href="{{ url_for('uploaded_file', filename=item.photo_filename) }}" target="_blank" rel="noreferrer">
+                  View
+                </a>
+              {% else %}
+                —
+              {% endif %}
+            </td>
+            <td class="actions-col">
+              {% if item.status == "pending" %}
+                <form method="POST" action="{{ url_for('admin_approve', item_id=item.id) }}">
+                  <button class="btn btn-small" type="submit">Approve</button>
+                </form>
+              {% endif %}
+
+              {% if item.status != "claimed" %}
+                <form method="POST" action="{{ url_for('admin_mark_claimed', item_id=item.id) }}">
+                  <button class="btn btn-small btn-light" type="submit">Mark Claimed</button>
+                </form>
+              {% endif %}
+
+              <form method="POST" action="{{ url_for('admin_delete', item_id=item.id) }}"
+                    onsubmit="return confirm('Delete this item?');">
+                <button class="btn btn-small btn-outline" type="submit">Delete</button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <h2 class="section-title" style="margin-top: 28px;">Recent Claim Requests</h2>
+  <div class="table-wrap" role="region" aria-label="Recent claims table">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>When</th>
+          <th>Item</th>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Message</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in claims %}
+          <tr>
+            <td>{{ c.created_at }}</td>
+            <td>{{ c.item_title }}</td>
+            <td>{{ c.student_name }}</td>
+            <td>{{ c.email }}</td>
+            <td>{{ c.message }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+</section>
+
+{% endblock %}

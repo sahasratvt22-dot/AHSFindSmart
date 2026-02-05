@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block content %}
+
+<section class="page-head">
+  <div class="container">
+    <h1>Map</h1>
+    <p class="muted">Click a location pin to view items reported in that area.</p>
+  </div>
+</section>
+
+<section class="container map-container">
+  <div class="card map-card">
+    <div class="map-wrap map-wrap-large" id="mapWrap">
+      <img
+        src="{{ url_for('static', filename='img/campus_map.jpg') }}"
+        alt="Campus map"
+        class="map-image"
+        draggable="false"
+      />
+
+      <!-- Pins -->
+      {% for loc in campus_locations %}
+        <button
+          type="button"
+          class="map-pin"
+          style="left: {{ loc.x }}%; top: {{ loc.y }}%;"
+          data-loc-id="{{ loc.id }}"
+          data-loc-name="{{ loc.name }}"
+          aria-label="{{ loc.name }}"
+          title="{{ loc.name }}"
+        >
+          ●
+        </button>
+      {% endfor %}
+
+      <!-- Floating info panel -->
+      <div class="map-float" id="mapFloat" aria-live="polite">
+        <div class="map-float-head">
+          <div class="map-float-title">
+            <h2 class="section-title" id="panelTitle">Select a location</h2>
+          </div>
+          <button class="map-float-close" type="button" aria-label="Close details">x</button>
+        </div>
+        <p class="muted" id="panelSub">Click a pin on the map to see items.</p>
+        <ul class="map-items" id="itemsList"></ul>
+        <p class="muted tiny" id="emptyMsg">No location selected.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  // Data from Flask: { "gym": [ {id,title,...}, ... ], ... }
+  window.__MAP_ITEMS__ = {{ map_items | tojson }};
+</script>
+
+{% endblock %}

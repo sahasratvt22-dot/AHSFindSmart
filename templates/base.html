@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{{ title if title else "Lost & Found" }}</title>
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+  <script defer src="{{ url_for('static', filename='js/main.js') }}"></script>
+
+  <!-- Chart.js for donut chart -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body class="{{ body_class if body_class else '' }}">
+
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="topbar">
+    <div class="brand">
+      <img
+        class="brand-logo"
+        src="{{ url_for('static', filename='img/logo.png') }}"
+        alt="School Lost and Found Logo"
+      />
+      <div class="brand-title">AHS FindSmart</div>
+    </div>
+
+    <nav class="nav" aria-label="Primary navigation">
+      <a class="nav-link" href="{{ url_for('home') }}">Home</a>
+      <a class="nav-link" href="{{ url_for('browse') }}">Browse</a>
+
+      <div class="nav-dropdown">
+        <button class="nav-link nav-dropbtn" aria-haspopup="true" aria-expanded="false">
+          Report
+          <span class="chev" aria-hidden="true">▾</span>
+        </button>
+        <div class="nav-dropdown-menu" role="menu">
+          <a role="menuitem" class="nav-dd-item" href="{{ url_for('report_found') }}">Report Found</a>
+          <a role="menuitem" class="nav-dd-item" href="{{ url_for('browse') }}">Claim Lost</a>
+        </div>
+      </div>
+
+      <a class="nav-link" href="{{ url_for('map_page') }}">Map</a>
+
+      <a class="nav-link" href="{{ url_for('feedback') }}">Feedback</a>
+
+      <a class="nav-link" href="{{ url_for('faq') }}">FAQ</a>
+
+      <a class="nav-link" href="{{ url_for('admin_panel') }}">Admin</a>
+
+      <div class="nav-right">
+        {% if is_admin %}
+          <span class="pill" aria-label="Logged in as admin">Admin</span>
+        {% endif %}
+        <a class="nav-link logout" href="{{ url_for('logout') }}">Logout</a>
+      </div>
+    </nav>
+  </header>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="flash-wrap" role="status" aria-live="polite">
+        {% for category, message in messages %}
+          <div class="flash flash-{{ category }}">{{ message }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <main id="main">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+      <p><strong>School Lost &amp; Found</strong> — Built from scratch for the community.</p>
+      <p class="tiny">
+        Note: If you use any copyrighted images/logos, document your sources.
+      </p>
+    </div>
+  </footer>
+</body>
+</html>
