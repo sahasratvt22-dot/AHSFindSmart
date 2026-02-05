@@ -1,0 +1,12 @@
+# Virtual environment
+.venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Env secrets
+.env
+
+# Flask instance folder (often contains local db/config)
+instance/
