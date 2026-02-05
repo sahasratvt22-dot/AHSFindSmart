@@ -1,6 +1,3 @@
 Flask==3.0.0
 python-dotenv==1.0.1
-git add requirements.txt
-git commit -m "Pin dependencies for Render deployment"
-git push
 
