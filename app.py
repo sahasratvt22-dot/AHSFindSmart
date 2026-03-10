@@ -1,7 +1,7 @@
 import os
 import json
 import smtplib
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from email.message import EmailMessage
 
@@ -119,6 +119,7 @@ def create_app() -> Flask:
     app = Flask(__name__)
     app.config["SECRET_KEY"] = os.getenv("FLASK_SECRET_KEY", "dev_secret_change_me")
     app.config["UPLOAD_FOLDER"] = str(UPLOAD_FOLDER)
+    app.permanent_session_lifetime = timedelta(days=30)
 
     UPLOAD_FOLDER.mkdir(exist_ok=True)
 
@@ -174,9 +175,26 @@ def create_app() -> Flask:
     def is_admin() -> bool:
         return session.get("is_admin") is True
 
+    def is_student() -> bool:
+        return session.get("is_student") is True
+
+    def current_user_name() -> str | None:
+        if is_admin():
+            return "Admin"
+        if is_student():
+            return session.get("student_name")
+        return None
+
+    def apply_session_persistence(should_remember: bool) -> None:
+        session.permanent = should_remember
+
     @app.context_processor
     def inject_globals():
-        return {"is_admin": is_admin()}
+        return {
+            "is_admin": is_admin(),
+            "is_student": is_student(),
+            "current_user_name": current_user_name(),
+        }
 
     # -------------------
     # Pages
@@ -204,6 +222,8 @@ def create_app() -> Flask:
 
     @app.route("/")
     def home():
+        today = datetime.now()
+        today_iso = today.date().isoformat()
         conn = get_conn()
         try:
             total_found = conn.execute("SELECT COUNT(*) AS c FROM found_items").fetchone()["c"]
@@ -217,8 +237,38 @@ def create_app() -> Flask:
                 "SELECT COUNT(*) AS c FROM found_items WHERE status='pending'"
             ).fetchone()["c"]
             total_claims = conn.execute("SELECT COUNT(*) AS c FROM claims").fetchone()["c"]
+            today_finds = conn.execute(
+                """
+                SELECT id, title, category, location_found, photo_filename, created_at
+                FROM found_items
+                WHERE status='approved' AND substr(created_at, 1, 10) = ?
+                ORDER BY created_at DESC
+                LIMIT 5
+                """,
+                (today_iso,),
+            ).fetchall()
         finally:
             conn.close()
+
+        today_find_cards = []
+        for row in today_finds:
+            created_at = row["created_at"] or ""
+            display_time = "Today"
+            try:
+                display_time = datetime.fromisoformat(created_at).strftime("%I:%M %p").lstrip("0")
+            except ValueError:
+                pass
+
+            today_find_cards.append(
+                {
+                    "id": row["id"],
+                    "title": row["title"],
+                    "category": row["category"],
+                    "location_found": row["location_found"],
+                    "photo_filename": row["photo_filename"],
+                    "display_time": display_time,
+                }
+            )
 
         return render_template(
             "home.html",
@@ -228,13 +278,17 @@ def create_app() -> Flask:
                 "claimed": claimed,
                 "pending": pending,
                 "total_claims": total_claims
-            }
+            },
+            today_finds=today_find_cards,
+            today_label=today.strftime("%A, %B %d, %Y"),
         )
 
     @app.route("/browse")
     def browse():
         q = request.args.get("q", "").strip()
         category = request.args.get("category", "").strip()
+        date_filter = request.args.get("date", "").strip()
+        today_iso = datetime.now().date().isoformat()
 
         conn = get_conn()
         try:
@@ -252,6 +306,10 @@ def create_app() -> Flask:
                 sql += " AND category = ?"
                 params.append(category)
 
+            if date_filter == "today":
+                sql += " AND substr(created_at, 1, 10) = ?"
+                params.append(today_iso)
+
             sql += " ORDER BY id DESC"
             items = conn.execute(sql, params).fetchall()
 
@@ -261,7 +319,14 @@ def create_app() -> Flask:
         finally:
             conn.close()
 
-        return render_template("browse.html", items=items, q=q, category=category, categories=categories)
+        return render_template(
+            "browse.html",
+            items=items,
+            q=q,
+            category=category,
+            categories=categories,
+            date_filter=date_filter,
+        )
 
     @app.route("/report-found", methods=["GET", "POST"])
     def report_found():
@@ -446,15 +511,19 @@ def create_app() -> Flask:
     # Admin auth + panel
     # -------------------
     @app.route("/login", methods=["GET", "POST"])
+    @app.route("/login/admin", methods=["GET", "POST"])
     def login():
         if request.method == "POST":
             username = request.form.get("username", "").strip()
             password = request.form.get("password", "").strip()
+            save_credentials = request.form.get("save_credentials") == "on"
 
             admin = load_admin()
 
             if username == admin["username"] and check_password_hash(admin["password_hash"], password):
+                session.clear()
                 session["is_admin"] = True
+                apply_session_persistence(save_credentials)
                 flash("Logged in as admin.", "success")
                 return redirect(url_for("admin_panel"))
 
@@ -462,6 +531,99 @@ def create_app() -> Flask:
             return redirect(url_for("login"))
 
         return render_template("login.html")
+
+    @app.route("/login/student", methods=["GET", "POST"])
+    def student_login():
+        if request.method == "POST":
+            email = request.form.get("email", "").strip().lower()
+            password = request.form.get("password", "").strip()
+            save_credentials = request.form.get("save_credentials") == "on"
+
+            if not email or not password:
+                flash("Email and password are required.", "error")
+                return redirect(url_for("student_login"))
+
+            conn = get_conn()
+            try:
+                student = conn.execute(
+                    "SELECT * FROM students WHERE email = ?",
+                    (email,),
+                ).fetchone()
+            finally:
+                conn.close()
+
+            if not student or not check_password_hash(student["password_hash"], password):
+                flash("Invalid student email or password.", "error")
+                return redirect(url_for("student_login"))
+
+            session.clear()
+            session["is_student"] = True
+            session["student_id"] = student["id"]
+            session["student_name"] = student["full_name"]
+            session["student_email"] = student["email"]
+            apply_session_persistence(save_credentials)
+            flash(f"Logged in as {student['full_name']}.", "success")
+            return redirect(url_for("home"))
+
+        return render_template("student_auth.html", mode="login")
+
+    @app.route("/signup/student", methods=["GET", "POST"])
+    def student_signup():
+        if request.method == "POST":
+            full_name = request.form.get("full_name", "").strip()
+            email = request.form.get("email", "").strip().lower()
+            password = request.form.get("password", "").strip()
+            confirm_password = request.form.get("confirm_password", "").strip()
+            save_credentials = request.form.get("save_credentials") == "on"
+
+            if not all([full_name, email, password, confirm_password]):
+                flash("Please fill out all student account fields.", "error")
+                return redirect(url_for("student_signup"))
+
+            if len(password) < 8:
+                flash("Password must be at least 8 characters.", "error")
+                return redirect(url_for("student_signup"))
+
+            if password != confirm_password:
+                flash("Passwords do not match.", "error")
+                return redirect(url_for("student_signup"))
+
+            conn = get_conn()
+            try:
+                existing = conn.execute(
+                    "SELECT id FROM students WHERE email = ?",
+                    (email,),
+                ).fetchone()
+                if existing:
+                    flash("That email is already registered. Try logging in instead.", "error")
+                    return redirect(url_for("student_login"))
+
+                cursor = conn.execute(
+                    """
+                    INSERT INTO students (full_name, email, password_hash, created_at)
+                    VALUES (?, ?, ?, ?)
+                    """,
+                    (
+                        full_name,
+                        email,
+                        generate_password_hash(password),
+                        datetime.now().isoformat(timespec="seconds"),
+                    ),
+                )
+                conn.commit()
+            finally:
+                conn.close()
+
+            session.clear()
+            session["is_student"] = True
+            session["student_id"] = cursor.lastrowid
+            session["student_name"] = full_name
+            session["student_email"] = email
+            apply_session_persistence(save_credentials)
+            flash("Student account created successfully.", "success")
+            return redirect(url_for("home"))
+
+        return render_template("student_auth.html", mode="signup")
 
     @app.route("/logout")
     def logout():

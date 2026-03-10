@@ -16,7 +16,13 @@
     </div>
     <div class="field">
       <label for="password">Password</label>
-      <input id="password" name="password" type="password" required />
+      <input id="password" name="password" type="password" required autocomplete="current-password" />
+    </div>
+    <div class="field checkbox-field">
+      <label class="checkline" for="save_credentials">
+        <input id="save_credentials" name="save_credentials" type="checkbox" />
+        <span>Save credentials on this device</span>
+      </label>
     </div>
 
     <div class="field actions">
@@ -24,9 +30,7 @@
       <a class="btn btn-outline" href="{{ url_for('home') }}">Cancel</a>
     </div>
 
-    <p class="tiny muted">
-      Tip: Set credentials in your <code>.env</code> file.
-    </p>
+    <p class="tiny muted">Use the admin username and password configured for this app.</p>
   </form>
 </section>
 

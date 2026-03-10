@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block content %}
+
+<section class="page-head">
+  <div class="container">
+    {% if mode == "signup" %}
+      <h1>Create Student Account</h1>
+      <p class="muted">Make a student login so you can keep your details saved on this device.</p>
+    {% else %}
+      <h1>Student Login</h1>
+      <p class="muted">Sign in with your student account or create one if this is your first time.</p>
+    {% endif %}
+  </div>
+</section>
+
+<section class="container">
+  <div class="form-card admin-login-card student-auth-card">
+    <div class="auth-switch" aria-label="Student account actions">
+      <a class="auth-switch-link {% if mode == 'login' %}active{% endif %}" href="{{ url_for('student_login') }}">Login</a>
+      <a class="auth-switch-link {% if mode == 'signup' %}active{% endif %}" href="{{ url_for('student_signup') }}">Create Account</a>
+    </div>
+
+    {% if mode == "signup" %}
+      <form method="POST" aria-label="Create student account form">
+        <div class="field">
+          <label for="full_name">Full name</label>
+          <input id="full_name" name="full_name" required autocomplete="name" />
+        </div>
+        <div class="field">
+          <label for="email">Email</label>
+          <input id="email" name="email" type="email" required autocomplete="email" />
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <input id="password" name="password" type="password" required autocomplete="new-password" />
+        </div>
+        <div class="field">
+          <label for="confirm_password">Confirm password</label>
+          <input id="confirm_password" name="confirm_password" type="password" required autocomplete="new-password" />
+        </div>
+        <div class="field checkbox-field">
+          <label class="checkline" for="save_credentials">
+            <input id="save_credentials" name="save_credentials" type="checkbox" />
+            <span>Save credentials on this device after account creation</span>
+          </label>
+        </div>
+        <div class="field actions">
+          <button class="btn" type="submit">Create Account</button>
+          <a class="btn btn-outline" href="{{ url_for('home') }}">Cancel</a>
+        </div>
+      </form>
+    {% else %}
+      <form method="POST" aria-label="Student login form">
+        <div class="field">
+          <label for="email">Email</label>
+          <input id="email" name="email" type="email" required autocomplete="email" />
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <input id="password" name="password" type="password" required autocomplete="current-password" />
+        </div>
+        <div class="field checkbox-field">
+          <label class="checkline" for="save_credentials">
+            <input id="save_credentials" name="save_credentials" type="checkbox" />
+            <span>Save credentials on this device</span>
+          </label>
+        </div>
+        <div class="field actions">
+          <button class="btn" type="submit">Login</button>
+          <a class="btn btn-outline" href="{{ url_for('home') }}">Cancel</a>
+        </div>
+      </form>
+    {% endif %}
+  </div>
+</section>
+
+{% endblock %}

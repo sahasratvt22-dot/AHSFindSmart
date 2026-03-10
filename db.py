@@ -37,6 +37,14 @@ CREATE TABLE IF NOT EXISTS reviews (
     rating INTEGER NOT NULL DEFAULT 5,
     created_at TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS students (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  full_name TEXT NOT NULL,
+  email TEXT NOT NULL UNIQUE,
+  password_hash TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
 """
 
 def get_conn() -> sqlite3.Connection:

@@ -46,13 +46,30 @@
 
       <a class="nav-link" href="{{ url_for('faq') }}">FAQ</a>
 
-      <a class="nav-link" href="{{ url_for('admin_panel') }}">Admin</a>
+      <div class="nav-dropdown">
+        <button class="nav-link nav-dropbtn" aria-haspopup="true" aria-expanded="false">
+          Login
+          <span class="chev" aria-hidden="true">▾</span>
+        </button>
+        <div class="nav-dropdown-menu" role="menu">
+          <a role="menuitem" class="nav-dd-item" href="{{ url_for('login') }}">Admin Login</a>
+          <a role="menuitem" class="nav-dd-item" href="{{ url_for('student_login') }}">Student Login</a>
+          <a role="menuitem" class="nav-dd-item" href="{{ url_for('student_signup') }}">Create Student Account</a>
+        </div>
+      </div>
 
       <div class="nav-right">
         {% if is_admin %}
           <span class="pill" aria-label="Logged in as admin">Admin</span>
+        {% elif is_student %}
+          <span class="pill" aria-label="Logged in as student">{{ current_user_name }}</span>
         {% endif %}
-        <a class="nav-link logout" href="{{ url_for('logout') }}">Logout</a>
+        {% if is_admin %}
+          <a class="nav-link" href="{{ url_for('admin_panel') }}">Admin Panel</a>
+        {% endif %}
+        {% if is_admin or is_student %}
+          <a class="nav-link logout" href="{{ url_for('logout') }}">Logout</a>
+        {% endif %}
       </div>
 
       <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="mobileMenu" aria-label="Open menu">
@@ -67,8 +84,15 @@
         <a class="nav-mobile-link" href="{{ url_for('map_page') }}">Map</a>
         <a class="nav-mobile-link" href="{{ url_for('feedback') }}">Feedback</a>
         <a class="nav-mobile-link" href="{{ url_for('faq') }}">FAQ</a>
-        <a class="nav-mobile-link" href="{{ url_for('admin_panel') }}">Admin</a>
-        <a class="nav-mobile-link" href="{{ url_for('logout') }}">Logout</a>
+        <a class="nav-mobile-link" href="{{ url_for('login') }}">Admin Login</a>
+        <a class="nav-mobile-link" href="{{ url_for('student_login') }}">Student Login</a>
+        <a class="nav-mobile-link" href="{{ url_for('student_signup') }}">Create Student Account</a>
+        {% if is_admin %}
+          <a class="nav-mobile-link" href="{{ url_for('admin_panel') }}">Admin Panel</a>
+        {% endif %}
+        {% if is_admin or is_student %}
+          <a class="nav-mobile-link" href="{{ url_for('logout') }}">Logout</a>
+        {% endif %}
       </div>
     </nav>
   </header>

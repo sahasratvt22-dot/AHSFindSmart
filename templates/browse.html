@@ -27,6 +27,14 @@
       </select>
     </div>
 
+    <div class="field">
+      <label for="date">Date</label>
+      <select id="date" name="date">
+        <option value="">Any time</option>
+        <option value="today" {% if date_filter == "today" %}selected{% endif %}>Today</option>
+      </select>
+    </div>
+
     <div class="field actions">
       <button class="btn" type="submit">Apply</button>
       <a class="btn btn-outline" href="{{ url_for('browse') }}">Clear</a>

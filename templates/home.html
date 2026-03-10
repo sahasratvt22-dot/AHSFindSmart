@@ -29,35 +29,47 @@
     </p>
   </div>
 
-  <!-- RIGHT: quick stats (unchanged) -->
-  <div class="quickstats" aria-label="Quick stats">
-    <h2 class="section-title">Quick Stats</h2>
-    <div class="qs-list">
-      <div class="qs-row">
-        <div class="qs-num">{{ stats.total_found }}</div>
-        <div class="qs-label">Total items posted</div>
+  <div class="todays-finds" aria-label="Today's finds">
+    <div class="todays-finds-head">
+      <div>
+        <h2 class="section-title">Today's Finds</h2>
+        <p class="muted">{{ today_label }}</p>
       </div>
-      <div class="qs-row">
-        <div class="qs-num">{{ stats.approved_found }}</div>
-        <div class="qs-label">Approved items</div>
-      </div>
-      <div class="qs-row">
-        <div class="qs-num">{{ stats.pending }}</div>
-        <div class="qs-label">Pending review</div>
-      </div>
-      <div class="qs-row">
-        <div class="qs-num">{{ stats.claimed }}</div>
-        <div class="qs-label">Marked claimed</div>
-      </div>
-      <div class="qs-row">
-        <div class="qs-num">{{ stats.total_claims }}</div>
-        <div class="qs-label">Claim requests</div>
-      </div>
+      <div class="todays-clock" aria-hidden="true">◷</div>
+    </div>
+
+    <div class="todays-finds-list">
+      {% if today_finds %}
+        {% for item in today_finds %}
+          <article class="today-item">
+            <div class="today-item-thumb" aria-hidden="true">
+              {% if item.photo_filename %}
+                <img
+                  src="{{ url_for('uploaded_file', filename=item.photo_filename) }}"
+                  alt=""
+                >
+              {% else %}
+                <span>{{ item.category[:1] }}</span>
+              {% endif %}
+            </div>
+            <div class="today-item-copy">
+              <h3>{{ item.title }}</h3>
+              <p>{{ item.location_found }}</p>
+              <p class="today-item-time">{{ item.display_time }}</p>
+            </div>
+          </article>
+        {% endfor %}
+      {% else %}
+        <div class="today-empty">
+          <h3>No approved finds yet today</h3>
+          <p class="muted">Newly approved items will show up here automatically.</p>
+        </div>
+      {% endif %}
     </div>
 
     <div class="qs-actions">
       <a class="btn btn-light" href="{{ url_for('report_found') }}">Report Found</a>
-      <a class="btn btn-outline" href="{{ url_for('browse') }}">Browse Items</a>
+      <a class="btn btn-outline" href="{{ url_for('browse', date='today') }}">View All Today</a>
     </div>
   </div>
 
