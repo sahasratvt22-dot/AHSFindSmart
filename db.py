@@ -25,6 +25,9 @@ CREATE TABLE IF NOT EXISTS claims (
   student_name TEXT NOT NULL,
   email TEXT NOT NULL,
   message TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending',
+  pickup_location TEXT,
+  approved_at TEXT,
   created_at TEXT NOT NULL,
   FOREIGN KEY(item_id) REFERENCES found_items(id) ON DELETE CASCADE
 );
@@ -45,6 +48,17 @@ def init_db() -> None:
     conn = get_conn()
     try:
         conn.executescript(SCHEMA)
+        claim_columns = {
+            row["name"] for row in conn.execute("PRAGMA table_info(claims)").fetchall()
+        }
+        if "status" not in claim_columns:
+            conn.execute(
+                "ALTER TABLE claims ADD COLUMN status TEXT NOT NULL DEFAULT 'pending'"
+            )
+        if "pickup_location" not in claim_columns:
+            conn.execute("ALTER TABLE claims ADD COLUMN pickup_location TEXT")
+        if "approved_at" not in claim_columns:
+            conn.execute("ALTER TABLE claims ADD COLUMN approved_at TEXT")
         conn.commit()
     finally:
         conn.close()

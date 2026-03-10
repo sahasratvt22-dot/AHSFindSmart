@@ -76,6 +76,9 @@
           <th>Name</th>
           <th>Email</th>
           <th>Message</th>
+          <th>Status</th>
+          <th>Pickup</th>
+          <th>Actions</th>
         </tr>
       </thead>
       <tbody>
@@ -86,6 +89,24 @@
             <td>{{ c.student_name }}</td>
             <td>{{ c.email }}</td>
             <td>{{ c.message }}</td>
+            <td><span class="badge badge-{{ c.status }}">{{ c.status }}</span></td>
+            <td>{{ c.pickup_location or "—" }}</td>
+            <td class="actions-col">
+              {% if c.status != "approved" %}
+                <form method="POST" action="{{ url_for('admin_approve_claim', claim_id=c.id) }}">
+                  <input
+                    type="text"
+                    name="pickup_location"
+                    placeholder="Front office"
+                    aria-label="Pickup location for {{ c.student_name }}"
+                    required
+                  >
+                  <button class="btn btn-small" type="submit">Approve + Email</button>
+                </form>
+              {% else %}
+                <span class="muted">Approved {{ c.approved_at }}</span>
+              {% endif %}
+            </td>
           </tr>
         {% endfor %}
       </tbody>

@@ -1,7 +1,9 @@
 import os
 import json
+import smtplib
 from datetime import datetime
 from pathlib import Path
+from email.message import EmailMessage
 
 from dotenv import load_dotenv
 from flask import (
@@ -74,6 +76,43 @@ def save_admin(admin):
 # -------------------
 def allowed_file(filename: str) -> bool:
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+def send_claim_approval_email(to_email: str, student_name: str, item_title: str, pickup_location: str) -> None:
+    smtp_host = os.getenv("SMTP_HOST")
+    smtp_port = int(os.getenv("SMTP_PORT", "587"))
+    smtp_username = os.getenv("SMTP_USERNAME")
+    smtp_password = os.getenv("SMTP_PASSWORD")
+    smtp_use_tls = os.getenv("SMTP_USE_TLS", "true").lower() == "true"
+    from_email = os.getenv("MAIL_FROM", smtp_username or "no-reply@example.com")
+
+    if not smtp_host or not smtp_username or not smtp_password:
+        raise RuntimeError(
+            "Email is not configured. Set SMTP_HOST, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD, and MAIL_FROM."
+        )
+
+    msg = EmailMessage()
+    msg["Subject"] = f"Lost and Found Claim Approved: {item_title}"
+    msg["From"] = from_email
+    msg["To"] = to_email
+    msg.set_content(
+        f"""Hello {student_name},
+
+Your claim request for "{item_title}" has been approved.
+
+You can pick it up at: {pickup_location}
+
+Please bring any information needed to confirm the item belongs to you.
+
+Lost and Found
+"""
+    )
+
+    with smtplib.SMTP(smtp_host, smtp_port, timeout=30) as server:
+        if smtp_use_tls:
+            server.starttls()
+        server.login(smtp_username, smtp_password)
+        server.send_message(msg)
 
 
 def create_app() -> Flask:
@@ -520,6 +559,69 @@ def create_app() -> Flask:
         flash("Marked as claimed.", "success")
         return redirect(url_for("admin_panel"))
 
+    @app.post("/admin/claim/<int:claim_id>/approve")
+    def admin_approve_claim(claim_id: int):
+        if not is_admin():
+            flash("Admin access required.", "error")
+            return redirect(url_for("login"))
+
+        pickup_location = request.form.get("pickup_location", "").strip()
+        if not pickup_location:
+            flash("Pickup location is required before approving a claim.", "error")
+            return redirect(url_for("admin_panel"))
+
+        conn = get_conn()
+        claim = None
+        try:
+            claim = conn.execute(
+                """
+                SELECT c.*, f.title AS item_title
+                FROM claims c
+                JOIN found_items f ON f.id = c.item_id
+                WHERE c.id = ?
+                """,
+                (claim_id,),
+            ).fetchone()
+
+            if not claim:
+                flash("Claim request not found.", "error")
+                return redirect(url_for("admin_panel"))
+
+            if claim["status"] == "approved":
+                flash("This claim request has already been approved.", "error")
+                return redirect(url_for("admin_panel"))
+
+            try:
+                send_claim_approval_email(
+                    to_email=claim["email"],
+                    student_name=claim["student_name"],
+                    item_title=claim["item_title"],
+                    pickup_location=pickup_location,
+                )
+            except Exception as exc:
+                flash(f"Approval email could not be sent: {exc}", "error")
+                return redirect(url_for("admin_panel"))
+
+            approved_at = datetime.now().isoformat(timespec="seconds")
+            conn.execute(
+                """
+                UPDATE claims
+                SET status='approved', pickup_location=?, approved_at=?
+                WHERE id=?
+                """,
+                (pickup_location, approved_at, claim_id),
+            )
+            conn.execute(
+                "UPDATE found_items SET status='claimed' WHERE id=?",
+                (claim["item_id"],),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+        flash(f"Claim approved and email sent to {claim['email']}.", "success")
+        return redirect(url_for("admin_panel"))
+
     @app.post("/admin/item/<int:item_id>/delete")
     def admin_delete(item_id: int):
         if not is_admin():
@@ -554,4 +656,3 @@ import os
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
-

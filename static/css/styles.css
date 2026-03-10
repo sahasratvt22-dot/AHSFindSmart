@@ -991,6 +991,12 @@ body.modal-open{ overflow:hidden; }
 .table{ width:100%; border-collapse: collapse; min-width: 820px; }
 .table th, .table td{ text-align:left; padding: 10px 12px; border-bottom: 1px solid rgba(0,0,0,0.08); vertical-align: top; }
 .actions-col{ display:flex; gap: 8px; flex-wrap:wrap; }
+.actions-col input{
+  min-width: 170px;
+  padding: 9px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(0,0,0,0.16);
+}
 .link{ color: var(--bg-maroon); font-weight: 900; text-decoration:none; }
 .link:hover{ text-decoration: underline; }
 
