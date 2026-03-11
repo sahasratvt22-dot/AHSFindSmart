@@ -1,6 +1,7 @@
 import os
 import json
 import smtplib
+import secrets
 from datetime import datetime, timedelta
 from pathlib import Path
 from email.message import EmailMessage
@@ -57,6 +58,7 @@ def load_admin():
     if not os.path.exists(ADMIN_FILE):
         admin = {
             "username": "admin",
+            "email": os.getenv("ADMIN_EMAIL", ""),
             "password_hash": generate_password_hash("admin123")  # change after first login
         }
         with open(ADMIN_FILE, "w") as f:
@@ -64,7 +66,13 @@ def load_admin():
         return admin
 
     with open(ADMIN_FILE, "r") as f:
-        return json.load(f)
+        admin = json.load(f)
+
+    if "email" not in admin:
+        admin["email"] = os.getenv("ADMIN_EMAIL", "")
+        save_admin(admin)
+
+    return admin
 
 def save_admin(admin):
     """Save admin credentials to admin.json."""
@@ -78,7 +86,7 @@ def allowed_file(filename: str) -> bool:
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
-def send_claim_approval_email(to_email: str, student_name: str, item_title: str, pickup_location: str) -> None:
+def get_email_config() -> tuple[str, int, str, str, bool, str]:
     smtp_host = os.getenv("SMTP_HOST")
     smtp_port = int(os.getenv("SMTP_PORT", "587"))
     smtp_username = os.getenv("SMTP_USERNAME")
@@ -91,11 +99,30 @@ def send_claim_approval_email(to_email: str, student_name: str, item_title: str,
             "Email is not configured. Set SMTP_HOST, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD, and MAIL_FROM."
         )
 
+    return smtp_host, smtp_port, smtp_username, smtp_password, smtp_use_tls, from_email
+
+
+def send_email_message(subject: str, to_email: str, body: str) -> None:
+    smtp_host, smtp_port, smtp_username, smtp_password, smtp_use_tls, from_email = get_email_config()
+
     msg = EmailMessage()
-    msg["Subject"] = f"Lost and Found Claim Approved: {item_title}"
+    msg["Subject"] = subject
     msg["From"] = from_email
     msg["To"] = to_email
-    msg.set_content(
+    msg.set_content(body)
+
+    with smtplib.SMTP(smtp_host, smtp_port, timeout=30) as server:
+        if smtp_use_tls:
+            server.starttls()
+        server.login(smtp_username, smtp_password)
+        server.send_message(msg)
+
+
+def send_claim_approval_email(to_email: str, student_name: str, item_title: str, pickup_location: str) -> None:
+    send_email_message(
+        subject=f"Lost and Found Claim Approved: {item_title}",
+        to_email=to_email,
+        body=
         f"""Hello {student_name},
 
 Your claim request for "{item_title}" has been approved.
@@ -108,11 +135,20 @@ Lost and Found
 """
     )
 
-    with smtplib.SMTP(smtp_host, smtp_port, timeout=30) as server:
-        if smtp_use_tls:
-            server.starttls()
-        server.login(smtp_username, smtp_password)
-        server.send_message(msg)
+
+def send_password_reset_email(to_email: str, account_label: str, reset_link: str) -> None:
+    send_email_message(
+        subject=f"{account_label} Password Reset",
+        to_email=to_email,
+        body=
+        f"""A password reset was requested for your {account_label.lower()}.
+
+Open this link to choose a new password:
+{reset_link}
+
+This link expires in 30 minutes. If you did not request this, you can ignore this email.
+""",
+    )
 
 
 def create_app() -> Flask:
@@ -187,6 +223,59 @@ def create_app() -> Flask:
 
     def apply_session_persistence(should_remember: bool) -> None:
         session.permanent = should_remember
+
+    def create_password_reset(user_type: str, user_key: str, email: str) -> str:
+        token = secrets.token_urlsafe(32)
+        now = datetime.now()
+        conn = get_conn()
+        try:
+            conn.execute(
+                "DELETE FROM password_resets WHERE user_type = ? AND user_key = ? AND used_at IS NULL",
+                (user_type, user_key),
+            )
+            conn.execute(
+                """
+                INSERT INTO password_resets (user_type, user_key, email, token, expires_at, created_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    user_type,
+                    user_key,
+                    email,
+                    token,
+                    (now + timedelta(minutes=30)).isoformat(timespec="seconds"),
+                    now.isoformat(timespec="seconds"),
+                ),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+        return token
+
+    def get_password_reset(token: str):
+        conn = get_conn()
+        try:
+            row = conn.execute(
+                """
+                SELECT *
+                FROM password_resets
+                WHERE token = ?
+                """,
+                (token,),
+            ).fetchone()
+        finally:
+            conn.close()
+
+        if not row or row["used_at"]:
+            return None
+
+        try:
+            if datetime.fromisoformat(row["expires_at"]) < datetime.now():
+                return None
+        except ValueError:
+            return None
+
+        return row
 
     @app.context_processor
     def inject_globals():
@@ -624,6 +713,120 @@ def create_app() -> Flask:
             return redirect(url_for("home"))
 
         return render_template("student_auth.html", mode="signup")
+
+    @app.route("/forgot-password/admin", methods=["GET", "POST"])
+    def admin_forgot_password():
+        if request.method == "POST":
+            username = request.form.get("username", "").strip()
+            admin = load_admin()
+
+            if username != admin["username"]:
+                flash("If that admin account exists, a reset link has been sent.", "success")
+                return redirect(url_for("login"))
+
+            admin_email = (admin.get("email") or os.getenv("ADMIN_EMAIL", "")).strip()
+            if not admin_email:
+                flash("Admin reset email is not configured yet. Set ADMIN_EMAIL first.", "error")
+                return redirect(url_for("admin_forgot_password"))
+
+            token = create_password_reset("admin", admin["username"], admin_email)
+            reset_link = url_for("reset_password", token=token, _external=True)
+
+            try:
+                send_password_reset_email(admin_email, "Admin Account", reset_link)
+            except Exception as exc:
+                flash(f"Reset email could not be sent: {exc}", "error")
+                return redirect(url_for("admin_forgot_password"))
+
+            flash("If that admin account exists, a reset link has been sent.", "success")
+            return redirect(url_for("login"))
+
+        return render_template(
+            "forgot_password.html",
+            account_type="admin",
+            form_action=url_for("admin_forgot_password"),
+        )
+
+    @app.route("/forgot-password/student", methods=["GET", "POST"])
+    def student_forgot_password():
+        if request.method == "POST":
+            email = request.form.get("email", "").strip().lower()
+            if not email:
+                flash("Email is required.", "error")
+                return redirect(url_for("student_forgot_password"))
+
+            conn = get_conn()
+            try:
+                student = conn.execute(
+                    "SELECT id, full_name, email FROM students WHERE email = ?",
+                    (email,),
+                ).fetchone()
+            finally:
+                conn.close()
+
+            if student:
+                token = create_password_reset("student", str(student["id"]), student["email"])
+                reset_link = url_for("reset_password", token=token, _external=True)
+                try:
+                    send_password_reset_email(student["email"], "Student Account", reset_link)
+                except Exception as exc:
+                    flash(f"Reset email could not be sent: {exc}", "error")
+                    return redirect(url_for("student_forgot_password"))
+
+            flash("If that student account exists, a reset link has been sent.", "success")
+            return redirect(url_for("student_login"))
+
+        return render_template(
+            "forgot_password.html",
+            account_type="student",
+            form_action=url_for("student_forgot_password"),
+        )
+
+    @app.route("/reset-password/<token>", methods=["GET", "POST"])
+    def reset_password(token: str):
+        reset_row = get_password_reset(token)
+        if not reset_row:
+            flash("That reset link is invalid or has expired.", "error")
+            return redirect(url_for("home"))
+
+        if request.method == "POST":
+            password = request.form.get("password", "").strip()
+            confirm_password = request.form.get("confirm_password", "").strip()
+
+            if len(password) < 8:
+                flash("Password must be at least 8 characters.", "error")
+                return redirect(url_for("reset_password", token=token))
+
+            if password != confirm_password:
+                flash("Passwords do not match.", "error")
+                return redirect(url_for("reset_password", token=token))
+
+            conn = get_conn()
+            try:
+                if reset_row["user_type"] == "student":
+                    conn.execute(
+                        "UPDATE students SET password_hash = ? WHERE id = ?",
+                        (generate_password_hash(password), int(reset_row["user_key"])),
+                    )
+                else:
+                    admin = load_admin()
+                    admin["password_hash"] = generate_password_hash(password)
+                    save_admin(admin)
+
+                conn.execute(
+                    "UPDATE password_resets SET used_at = ? WHERE id = ?",
+                    (datetime.now().isoformat(timespec="seconds"), reset_row["id"]),
+                )
+                conn.commit()
+            finally:
+                conn.close()
+
+            flash("Password reset successfully. You can log in now.", "success")
+            if reset_row["user_type"] == "student":
+                return redirect(url_for("student_login"))
+            return redirect(url_for("login"))
+
+        return render_template("reset_password.html", token=token, user_type=reset_row["user_type"])
 
     @app.route("/logout")
     def logout():

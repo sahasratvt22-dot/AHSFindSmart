@@ -45,6 +45,17 @@ CREATE TABLE IF NOT EXISTS students (
   password_hash TEXT NOT NULL,
   created_at TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS password_resets (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_type TEXT NOT NULL,
+  user_key TEXT NOT NULL,
+  email TEXT NOT NULL,
+  token TEXT NOT NULL UNIQUE,
+  expires_at TEXT NOT NULL,
+  used_at TEXT,
+  created_at TEXT NOT NULL
+);
 """
 
 def get_conn() -> sqlite3.Connection:

@@ -1109,6 +1109,9 @@ body.modal-open{ overflow:hidden; }
   background: #4b0f1f;
   color: #fff;
 }
+.auth-helper{
+  margin: 10px 0 0;
+}
 
 .split{
   display:grid;
