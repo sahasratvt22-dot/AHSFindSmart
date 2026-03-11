@@ -84,7 +84,7 @@
       <tbody>
         {% for c in claims %}
           <tr>
-            <td>{{ c.created_at }}</td>
+            <td>{{ c.display_created_at }}</td>
             <td>{{ c.item_title }}</td>
             <td>{{ c.student_name }}</td>
             <td>{{ c.email }}</td>
@@ -104,7 +104,7 @@
                   <button class="btn btn-small" type="submit">Approve + Email</button>
                 </form>
               {% else %}
-                <span class="muted">Approved {{ c.approved_at }}</span>
+                <span class="muted">Approved {{ c.display_approved_at }}</span>
               {% endif %}
             </td>
           </tr>

@@ -224,6 +224,22 @@ def create_app() -> Flask:
     def apply_session_persistence(should_remember: bool) -> None:
         session.permanent = should_remember
 
+    def format_clock_time(time_value: str | None) -> str:
+        if not time_value:
+            return "Time not provided"
+        try:
+            return datetime.strptime(time_value, "%H:%M").strftime("%I:%M %p").lstrip("0")
+        except ValueError:
+            return time_value
+
+    def format_datetime_display(value: str | None) -> str:
+        if not value:
+            return "—"
+        try:
+            return datetime.fromisoformat(value).strftime("%b %d, %Y, %I:%M %p").replace(" 0", " ")
+        except ValueError:
+            return value
+
     def create_password_reset(user_type: str, user_key: str, email: str) -> str:
         token = secrets.token_urlsafe(32)
         now = datetime.now()
@@ -328,10 +344,10 @@ def create_app() -> Flask:
             total_claims = conn.execute("SELECT COUNT(*) AS c FROM claims").fetchone()["c"]
             today_finds = conn.execute(
                 """
-                SELECT id, title, category, location_found, photo_filename, created_at
+                SELECT id, title, category, location_found, photo_filename, created_at, time_found
                 FROM found_items
-                WHERE status='approved' AND substr(created_at, 1, 10) = ?
-                ORDER BY created_at DESC
+                WHERE status='approved' AND date_found = ?
+                ORDER BY COALESCE(time_found, '23:59') DESC, id DESC
                 LIMIT 5
                 """,
                 (today_iso,),
@@ -341,13 +357,6 @@ def create_app() -> Flask:
 
         today_find_cards = []
         for row in today_finds:
-            created_at = row["created_at"] or ""
-            display_time = "Today"
-            try:
-                display_time = datetime.fromisoformat(created_at).strftime("%I:%M %p").lstrip("0")
-            except ValueError:
-                pass
-
             today_find_cards.append(
                 {
                     "id": row["id"],
@@ -355,7 +364,7 @@ def create_app() -> Flask:
                     "category": row["category"],
                     "location_found": row["location_found"],
                     "photo_filename": row["photo_filename"],
-                    "display_time": display_time,
+                    "display_time": format_clock_time(row["time_found"]),
                 }
             )
 
@@ -396,7 +405,7 @@ def create_app() -> Flask:
                 params.append(category)
 
             if date_filter == "today":
-                sql += " AND substr(created_at, 1, 10) = ?"
+                sql += " AND date_found = ?"
                 params.append(today_iso)
 
             sql += " ORDER BY id DESC"
@@ -424,6 +433,7 @@ def create_app() -> Flask:
             category = request.form.get("category", "").strip()
             location_id = request.form.get("location_id", "").strip()
             date_found = request.form.get("date_found", "").strip()
+            time_found = request.form.get("time_found", "").strip()
             description = request.form.get("description", "").strip()
 
             if not all([title, category, location_id, date_found, description]):
@@ -453,9 +463,9 @@ def create_app() -> Flask:
                     """
                     INSERT INTO found_items (
                         title, category, location_found, location_id,
-                        date_found, description, photo_filename, status, created_at
+                        date_found, time_found, description, photo_filename, status, created_at
                     )
-                    VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)
                     """,
                     (
                         title,
@@ -463,6 +473,7 @@ def create_app() -> Flask:
                         loc_name,        # friendly text
                         location_id,     # exact map ID
                         date_found,
+                        time_found or None,
                         description,
                         photo_filename,
                         datetime.now().isoformat(timespec="seconds")
@@ -855,7 +866,14 @@ def create_app() -> Flask:
         finally:
             conn.close()
 
-        return render_template("admin.html", items=items, claims=claims)
+        formatted_claims = []
+        for claim in claims:
+            claim_data = dict(claim)
+            claim_data["display_created_at"] = format_datetime_display(claim["created_at"])
+            claim_data["display_approved_at"] = format_datetime_display(claim["approved_at"])
+            formatted_claims.append(claim_data)
+
+        return render_template("admin.html", items=items, claims=formatted_claims)
 
     @app.route("/admin/change-password", methods=["GET", "POST"])
     def admin_change_password():

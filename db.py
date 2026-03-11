@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS found_items (
   location_found TEXT NOT NULL,
   location_id TEXT,
   date_found TEXT NOT NULL,
+  time_found TEXT,
   description TEXT NOT NULL,
   photo_filename TEXT,
   status TEXT NOT NULL DEFAULT 'pending',  -- pending | approved | claimed
@@ -67,6 +68,12 @@ def init_db() -> None:
     conn = get_conn()
     try:
         conn.executescript(SCHEMA)
+        found_item_columns = {
+            row["name"] for row in conn.execute("PRAGMA table_info(found_items)").fetchall()
+        }
+        if "time_found" not in found_item_columns:
+            conn.execute("ALTER TABLE found_items ADD COLUMN time_found TEXT")
+
         claim_columns = {
             row["name"] for row in conn.execute("PRAGMA table_info(claims)").fetchall()
         }
